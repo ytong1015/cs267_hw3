@@ -55,23 +55,23 @@ int64_t hashkmer(int64_t  hashtable_size, char *seq)
 /* Looks up a kmer in the hash table and returns a pointer to that entry */
 kmer_t* lookup_kmer(shared hash_table_t *hashtable, const unsigned char *kmer)
 {
-   //printf("swag0\n");
+   printf("swag0\n");
    char packedKmer[KMER_PACKED_LENGTH];
-   //printf("swag1\n");
+   printf("swag1\n");
    packSequence(kmer, (unsigned char*) packedKmer, KMER_LENGTH);
-   //printf("swag2\n");
+   printf("swag2\n");
    int64_t hashval = hashkmer(hashtable->size, (char*) packedKmer);
-   //printf("swag3\n");
+   printf("swag3\n");
    bucket_t cur_bucket;
    kmer_t *result;
    
-   //printf("swag4 %d\n", hashval); 
+   printf("swag4 %d\n", hashval); 
    // upc_memget(&cur_bucket, &(hashtable->table[hashval]), sizeof(bucket_t));
    cur_bucket = hashtable->table[hashval];
-   //printf("swag5 %d\n", hashtable->size);
+   printf("swag5 %d\n", hashtable->size);
    result = cur_bucket.head;
    
-   //printf("swag6 \n");
+   printf("swag6 \n");
    for (; result!=NULL; ) {
       if ( memcmp(packedKmer, result->kmer, KMER_PACKED_LENGTH * sizeof(char)) == 0 ) {
          return result;
@@ -86,28 +86,28 @@ int add_kmer(shared hash_table_t *hashtable, shared memory_heap_t *memory_heap, 
 {
    /* Pack a k-mer sequence appropriately */
    char packedKmer[KMER_PACKED_LENGTH];
-   //printf("yolo0.1\n");
+   printf("yolo0.1\n");
    packSequence(kmer, (unsigned char*) packedKmer, KMER_LENGTH);
-   //printf("yolo0.2\n");
+   printf("yolo0.2\n");
    int64_t hashval = hashkmer(hashtable->size, (char*) packedKmer);
-   //printf("yolo0.3\n");
+   printf("yolo0.3\n");
    int64_t pos = memory_heap->posInHeap;
-   //printf("yolo0.4\n");
+   printf("yolo0.4\n");
    
    /* Add the contents to the appropriate kmer struct in the heap */
-   //printf("yolo1, pos = %d, hashval = %d\n", pos, hashval);
+   printf("yolo1, pos = %d, hashval = %d\n", pos, hashval);
    upc_memput(&((memory_heap->heap[pos]).kmer), packedKmer, KMER_PACKED_LENGTH * sizeof(char));
-   //// printf("yolo2, %s\n", (memory_heap->heap[pos]).kmer);
+   // printf("yolo2, %s\n", (memory_heap->heap[pos]).kmer);
    (memory_heap->heap[pos]).l_ext = left_ext;
    (memory_heap->heap[pos]).r_ext = right_ext;
-   //printf("yolo3\n");
+   printf("yolo3\n");
    
    /* Fix the next pointer to point to the appropriate kmer struct */
    (memory_heap->heap[pos]).next = hashtable->table[hashval].head;
    /* Fix the head pointer of the appropriate bucket to point to the current kmer */
    hashtable->table[hashval].head = &(memory_heap->heap[pos]);
    
-   //printf("yolo4\n");
+   printf("yolo4\n");
    /* Increase the heap pointer */
    memory_heap->posInHeap++;
    

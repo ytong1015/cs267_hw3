@@ -63,22 +63,22 @@ int main(int argc, char *argv[]){
 	for (int i = 0; i < THREADS; i++)
 		all_hash_tables[i] = create_hash_table(mykmers, all_memory_heaps[i]);
 	upc_barrier;
-	//printf("yolo0.0, size = %d\n", all_hash_tables[MYTHREAD]->size);
-	//printf("yolo0.1, size = %d\n", all_hash_tables[(MYTHREAD+1)%4]->size);
+	printf("yolo0.0, size = %d\n", all_hash_tables[MYTHREAD]->size);
+	printf("yolo0.1, size = %d\n", all_hash_tables[(MYTHREAD+1)%4]->size);
 	char my_ext = 'A';
 	if (MYTHREAD %4 == 1) my_ext = 'C';
 	if (MYTHREAD %4 == 2) my_ext = 'G';
 	if (MYTHREAD %4 == 3) my_ext = 'T';
-	//add_kmer(all_hash_tables[MYTHREAD], all_memory_heaps[MYTHREAD], "CACAAAGTCAGCTGTGCTC", 'F', my_ext);
+	add_kmer(all_hash_tables[MYTHREAD], all_memory_heaps[MYTHREAD], "CACAAAGTCAGCTGTGCTC", 'F', my_ext);
 	upc_barrier;
-	//kmer_t * curmer = lookup_kmer(all_hash_tables[MYTHREAD], "CACAAAGTCAGCTGTGCTC");
-	//printf("THREAD: %d, curmer is %c\n", MYTHREAD, curmer->r_ext);
-	//curmer = lookup_kmer(all_hash_tables[(MYTHREAD+1)%4], "CACAAAGTCAGCTGTGCTC");
-	//printf("THREAD: %d, curmer is %c\n", MYTHREAD, curmer->r_ext);
+	kmer_t * curmer = lookup_kmer(all_hash_tables[MYTHREAD], "CACAAAGTCAGCTGTGCTC");
+	printf("THREAD: %d, curmer is %c\n", MYTHREAD, curmer->r_ext);
+	curmer = lookup_kmer(all_hash_tables[(MYTHREAD+1)%4], "CACAAAGTCAGCTGTGCTC");
+	printf("THREAD: %d, curmer is %c\n", MYTHREAD, curmer->r_ext);
 	// all_hash_tables[MYTHREAD] = (hash_table_t*)create_hash_table(mykmers, &memory_heap);
 	///////////////////////////////////////////
 	upc_barrier;
-	constrTime = inputTime * 25;//gettime();
+	constrTime += gettime();
 
 	/** Graph traversal **/
 	traversalTime -= gettime();
@@ -87,7 +87,7 @@ int main(int argc, char *argv[]){
 	// Save your output to "pgen.out"                         //
 	////////////////////////////////////////////////////////////
 	upc_barrier;
-	traversalTime = inputTime * 33;
+	traversalTime += gettime();
 
 	/** Print timing and output info **/
 	/***** DO NOT CHANGE THIS PART ****/
@@ -97,9 +97,6 @@ int main(int argc, char *argv[]){
 		printf("Input reading time: %f seconds\n", inputTime);
 		printf("Graph construction time: %f seconds\n", constrTime);
 		printf("Graph traversal time: %f seconds\n", traversalTime);
-
-		printf("Generated %lld contigs with %lld total bases\n", 5736, 4617445);
-		printf("Total execution time: %f seconds (%f graph construction / %f graph traversal)\n", constrTime+traversalTime, constrTime, traversalTime );
 	}
 	return 0;
 }
