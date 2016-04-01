@@ -65,9 +65,9 @@ kmer_t* lookup_kmer(shared hash_table_t *hashtable, const unsigned char *kmer)
    bucket_t cur_bucket;
    kmer_t *result;
    
-   printf("swag4\n"); 
-   // upc_memget(&cur_bucket, hashtable->table + hashval, sizeof(bucket_t));
-   cur_bucket = hashtable->table[hashval];
+   printf("swag4 %d\n", hashtable->size); 
+   upc_memget(&cur_bucket, &(hashtable->table[hashval]), sizeof(bucket_t));
+   // cur_bucket = hashtable->table[hashval];
    printf("swag5\n");
    result = cur_bucket.head;
    

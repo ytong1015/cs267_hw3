@@ -46,9 +46,9 @@ int main(int argc, char *argv[]){
 	inputFile = fopen(input_UFX_name, "r");
 	fseek(inputFile, MYTHREAD*kmers_per_proc*LINE_SIZE*sizeof(unsigned char), SEEK_SET);
 	cur_chars_read = fread(working_buffer, sizeof(unsigned char), total_chars_to_read , inputFile);
-	//upc_lock(l);
-	//printf("Thread %d of %d: hello UPC world, nKmers is %d, line size is %d, read size is %d, Buffer is \n%*s\n", MYTHREAD, THREADS, nKmers, LINE_SIZE, sizeof(unsigned char)* total_chars_to_read , sizeof(unsigned char)* total_chars_to_read ,working_buffer); 
-	//upc_unlock(l);
+	// upc_lock(l);
+	// printf("Thread %d of %d: hello UPC world, nKmers is %d, line size is %d, read size is %d, Buffer is \n%*s\n", MYTHREAD, THREADS, nKmers, LINE_SIZE, sizeof(unsigned char)* total_chars_to_read , sizeof(unsigned char)* total_chars_to_read ,working_buffer); 
+	// upc_unlock(l);
 	///////////////////////////////////////////
 	upc_barrier;
 	inputTime += gettime();
@@ -57,12 +57,14 @@ int main(int argc, char *argv[]){
 	constrTime -= gettime();
 	///////////////////////////////////////////
 	// Your code for graph construction here //
-	shared memory_heap_t **all_memory_heaps = upc_all_alloc(1, sizeof(shared memory_heap_t*));
-	// all_hash_tables = (shtptr*) upc_alloc(THREADS*sizeof(hash_table_t*));
-	shared hash_table_t **all_hash_tables  = upc_all_alloc(1, sizeof(shared hash_table_t*));
-	all_hash_tables[MYTHREAD] = (shared hash_table_t*) create_hash_table(mykmers, all_memory_heaps[MYTHREAD]);
+	shared memory_heap_t ** all_memory_heaps = (shared memory_heap_t**) upc_all_alloc(THREADS*sizeof(shared memory_heap_t*), sizeof(shared memory_heap_t*));
+	// all_hash_tables THREADS*= (shtptr*) upc_alloc(sizeof(hash_table_t*));
+	shared hash_table_t ** all_hash_tables  = (shared hash_table_t**) upc_all_alloc(THREADS*sizeof(shared memory_heap_t*), sizeof(shared hash_table_t*));
+	for (int i = 0; i < THREADS; i++)
+		all_hash_tables[i] = create_hash_table(mykmers, all_memory_heaps[i]);
 	upc_barrier;
-	printf("yolo0.0\n");
+	printf("yolo0.0, size = %d\n", all_hash_tables[MYTHREAD]->size);
+	printf("yolo0.1, size = %d\n", all_hash_tables[(MYTHREAD+1)%4]->size);
 	char my_ext = 'A';
 	if (MYTHREAD %4 == 1) my_ext = 'C';
 	if (MYTHREAD %4 == 2) my_ext = 'G';
