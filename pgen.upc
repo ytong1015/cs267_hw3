@@ -46,9 +46,9 @@ int main(int argc, char *argv[]){
 	inputFile = fopen(input_UFX_name, "r");
 	fseek(inputFile, MYTHREAD*kmers_per_proc*LINE_SIZE*sizeof(unsigned char), SEEK_SET);
 	cur_chars_read = fread(working_buffer, sizeof(unsigned char), total_chars_to_read , inputFile);
-	// upc_lock(l);
-	// printf("Thread %d of %d: hello UPC world, nKmers is %d, line size is %d, read size is %d, Buffer is \n%*s\n", MYTHREAD, THREADS, nKmers, LINE_SIZE, sizeof(unsigned char)* total_chars_to_read , sizeof(unsigned char)* total_chars_to_read ,working_buffer); 
-	// upc_unlock(l);
+	upc_lock(l);
+	printf("Thread %d of %d: hello UPC world, nKmers is %d, line size is %d, read size is %d, Buffer is \n%*s\n", MYTHREAD, THREADS, nKmers, LINE_SIZE, sizeof(unsigned char)* total_chars_to_read , sizeof(unsigned char)* total_chars_to_read ,working_buffer); 
+	upc_unlock(l);
 	///////////////////////////////////////////
 	upc_barrier;
 	inputTime += gettime();
@@ -59,6 +59,7 @@ int main(int argc, char *argv[]){
 	// Your code for graph construction here //
 	shared memory_heap_t* memory_heap;
 	shared hash_table_t* hashtable;
+	// if (MYTHREAD==0)
 	hashtable = (shared hash_table_t*) create_hash_table(nKmers, memory_heap);
 
 	upc_barrier;
@@ -67,8 +68,11 @@ int main(int argc, char *argv[]){
 	add_kmer(hashtable, memory_heap, &working_buffer[0], working_buffer[KMER_LENGTH+1], working_buffer[KMER_LENGTH+2], l);
 	upc_barrier;
 	if (MYTHREAD == 0) {
-		for (int i = 25; i < 26;i++) {//hashtable->size; i++) {
-			printf("%d\n", KMER_PACKED_LENGTH, hashtable->table[i].head->kmer);
+		printf("pgen 0 %d\n",hashtable->size);
+		for (int i = 0; i < hashtable->size;i++) {//hashtable->size; i++) {
+			shared bucket_t *temp= hashtable->table;
+			printf("pgen 1 %.*s\n",KMER_PACKED_LENGTH, temp[i].head->kmer);
+			// printf("%c\n",  temp);
 		}
 	}
 

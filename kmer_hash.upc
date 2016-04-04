@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
-#include <math.h> 
+#include <math.h> upc_memput
 #include <string.h>
 #include "contig_generation.h"
 
@@ -14,16 +14,16 @@ shared hash_table_t* create_hash_table(int64_t nEntries, shared memory_heap_t * 
    shared hash_table_t *result;
    int64_t n_buckets = nEntries * LOAD_FACTOR;
 
-   result = (shared hash_table_t*) upc_alloc(sizeof(hash_table_t));
+   result = (shared hash_table_t*) upc_alloc( sizeof(hash_table_t));
    result->size = n_buckets;
-   result->table = (shared bucket_t*) upc_all_alloc(THREADS, n_buckets*sizeof(bucket_t*));
+   result->table = (shared bucket_t*) upc_all_alloc(THREADS, (n_buckets/THREADS+1)*sizeof(bucket_t));
    
    if (result->table == NULL) {
       fprintf(stderr, "ERROR: Could not allocate memory for the hash table: %lld buckets of %lu bytes\n", n_buckets, sizeof(bucket_t));
       exit(1);
    }
    
-   memory_heap->heap = (shared kmer_t *) upc_all_alloc(THREADS, nEntries * sizeof(kmer_t));
+   memory_heap->heap = (shared kmer_t *) upc_all_alloc(THREADS, (nEntries/THREADS+1)*sizeof(kmer_t));
    if (memory_heap->heap == NULL) {
       fprintf(stderr, "ERROR: Could not allocate memory for the heap!\n");
       exit(1);
@@ -78,28 +78,30 @@ int add_kmer(shared hash_table_t *hashtable, shared memory_heap_t *memory_heap, 
    /* Pack a k-mer sequence appropriately */
    char packedKmer[KMER_PACKED_LENGTH];
    packSequence(kmer, (unsigned char*) packedKmer, KMER_LENGTH);
-   int64_t hashval = hashkmer(hashtable->size, (char*) packedKmer);
+   int64_t hashval = hashkmer(hashtable->size, (unsigned char*) packedKmer);
    upc_lock(l);
    int64_t pos = memory_heap->posInHeap;
-   /* Increase the heap pointer */
-   memory_heap->posInHeap++;
-   upc_unlock(l);
+
    printf("yolo 1 %d %d\n", MYTHREAD, hashval);
    /* Add the contents to the appropriate kmer struct in the heap */
-   shared kmer_t* temp = memory_heap->heap;
-   upc_memput(temp[pos].kmer, packedKmer, KMER_PACKED_LENGTH * sizeof(char));
-   printf("yolo 2\n");
+   shared kmer_t* temp = &(memory_heap->heap);
+   printf("yolo 1.5 THREAD %d %d %d\n", MYTHREAD, pos, temp);
+   upc_memput(temp[pos].kmer, packedKmer, KMER_PACKED_LENGTH * sizeof(unsigned char));
+   printf("yolo 2 %d --- %.*s\n", MYTHREAD, KMER_PACKED_LENGTH, packedKmer);
    temp[pos].l_ext = left_ext;
    temp[pos].r_ext = right_ext;
-   printf("yolo 2.5\n");
+   // printf("yolo 2.5\n");
    /* Fix the next pointer to point to the appropriate kmer struct */
    shared bucket_t* shit = hashtable->table;
    upc_memcpy(&(temp[pos].next), &(shit[hashval].head), sizeof(shared kmer_t*));
-   printf("yolo 2.75\n");
+   // printf("yolo 2.75\n");
    /* Fix the head pointer of the appropriate bucket to point to the current kmer */
    upc_memcpy(shit[hashval].head, &(temp[pos]), sizeof(shared kmer_t*));
-   
-   printf("yolo3\n");
+      /* Increase the heap pointer */
+   memory_heap->posInHeap++;
+   upc_unlock(l);
+
+   printf("yolo 3 %d\n", MYTHREAD);
    return 0;
 }
 
