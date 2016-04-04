@@ -34,39 +34,39 @@ static double gettime(void) {
 }
 
 /* K-mer data structure */
-typedef shared struct kmer_t kmer_t;
-shared struct kmer_t{
-   shared char kmer[KMER_PACKED_LENGTH];
-   shared char l_ext;
-   shared char r_ext;
-   shared kmer_t *next;
+typedef  struct kmer_t kmer_t;
+ struct kmer_t{
+    char kmer[KMER_PACKED_LENGTH];
+    char l_ext;
+    char r_ext;
+    kmer_t *next;
 };
 
 /* Start k-mer data structure */
-typedef shared struct start_kmer_t start_kmer_t;
-shared struct start_kmer_t{
-   shared kmer_t *kmerPtr;
-   shared start_kmer_t *next;
+typedef  struct start_kmer_t start_kmer_t;
+ struct start_kmer_t{
+    kmer_t *kmerPtr;
+    start_kmer_t *next;
 };
 
 /* Bucket data structure */
-typedef shared struct bucket_t bucket_t;
-shared struct bucket_t{
-   shared kmer_t *head;          // Pointer to the first entry of that bucket
+typedef  struct bucket_t bucket_t;
+ struct bucket_t{
+    kmer_t *head;          // Pointer to the first entry of that bucket
 };
 
 /* Hash table data structure */
-typedef shared struct hash_table_t hash_table_t;
-shared struct hash_table_t {
-   shared int64_t size;           // Size of the hash table
-   shared bucket_t *table;			// Entries of the hash table are pointers to buckets
+typedef  struct hash_table_t hash_table_t;
+ struct hash_table_t {
+    int64_t size;           // Size of the hash table
+    bucket_t *table;			// Entries of the hash table are pointers to buckets
 };
 
 /* Memory heap data structure */
-typedef shared struct memory_heap_t shared memory_heap_t;
-shared struct memory_heap_t {
-   shared kmer_t *heap;
-   shared int64_t posInHeap;
+typedef  struct memory_heap_t  memory_heap_t;
+ struct memory_heap_t {
+    kmer_t *heap;
+    int64_t posInHeap;
 };
 
 /* Returns the number of UFX kmers in a file */
