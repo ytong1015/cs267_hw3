@@ -9,8 +9,8 @@
 #include "packingDNAseq.h"
 #include "kmer_hash.upc"
 
-typedef shared [] hash_table_t* shtptr;
-shared shtptr all_hash_tables[THREADS];
+// typedef shared [] hash_table_t* shtptr;
+// shared shtptr all_hash_tables[THREADS];
 
 int main(int argc, char *argv[]){
 
@@ -57,24 +57,26 @@ int main(int argc, char *argv[]){
 	constrTime -= gettime();
 	///////////////////////////////////////////
 	// Your code for graph construction here //
-	shared memory_heap_t ** all_memory_heaps = (shared memory_heap_t**) upc_all_alloc(THREADS*sizeof(shared memory_heap_t*), sizeof(shared memory_heap_t*));
-	// all_hash_tables THREADS*= (shtptr*) upc_alloc(sizeof(hash_table_t*));
-	shared hash_table_t ** all_hash_tables  = (shared hash_table_t**) upc_all_alloc(THREADS*sizeof(shared memory_heap_t*), sizeof(shared hash_table_t*));
-	for (int i = 0; i < THREADS; i++)
-		all_hash_tables[i] = create_hash_table(mykmers, all_memory_heaps[i]);
+	shared memory_heap_t* memory_heap;
+	shared hash_table_t* hashtable;
+	hashtable = (shared hash_table_t*) create_hash_table(nKmers, memory_heap);
+
 	upc_barrier;
-	printf("yolo0.0, size = %d\n", all_hash_tables[MYTHREAD]->size);
-	printf("yolo0.1, size = %d\n", all_hash_tables[(MYTHREAD+1)%4]->size);
-	char my_ext = 'A';
-	if (MYTHREAD %4 == 1) my_ext = 'C';
-	if (MYTHREAD %4 == 2) my_ext = 'G';
-	if (MYTHREAD %4 == 3) my_ext = 'T';
-	add_kmer(all_hash_tables[MYTHREAD], all_memory_heaps[MYTHREAD], "CACAAAGTCAGCTGTGCTC", 'F', my_ext);
+	printf("yolo0.0, size = %d\n", hashtable->size);
+	// printf("yolo0.1, size = %d\n", all_hash_tables[(MYTHREAD+1)%4]->size);
+	add_kmer(hashtable, memory_heap, &working_buffer[0], working_buffer[KMER_LENGTH+1], working_buffer[KMER_LENGTH+2], l);
 	upc_barrier;
-	kmer_t * curmer = lookup_kmer(all_hash_tables[MYTHREAD], "CACAAAGTCAGCTGTGCTC");
-	printf("THREAD: %d, curmer is %c\n", MYTHREAD, curmer->r_ext);
-	curmer = lookup_kmer(all_hash_tables[(MYTHREAD+1)%4], "CACAAAGTCAGCTGTGCTC");
-	printf("THREAD: %d, curmer is %c\n", MYTHREAD, curmer->r_ext);
+	if (MYTHREAD == 0) {
+		for (int i = 25; i < 26;i++) {//hashtable->size; i++) {
+			printf("%d\n", KMER_PACKED_LENGTH, hashtable->table[i].head->kmer);
+		}
+	}
+
+	// upc_barrier;
+	// kmer_t * curmer = lookup_kmer(all_hash_tables[MYTHREAD], "CACAAAGTCAGCTGTGCTC");
+	// printf("THREAD: %d, curmer is %c\n", MYTHREAD, curmer->r_ext);
+	// curmer = lookup_kmer(all_hash_tables[(MYTHREAD+1)%4], "CACAAAGTCAGCTGTGCTC");
+	// printf("THREAD: %d, curmer is %c\n", MYTHREAD, curmer->r_ext);
 	// all_hash_tables[MYTHREAD] = (hash_table_t*)create_hash_table(mykmers, &memory_heap);
 	///////////////////////////////////////////
 	upc_barrier;
