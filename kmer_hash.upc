@@ -14,9 +14,9 @@ shared hash_table_t* create_hash_table(int64_t nEntries, shared memory_heap_t * 
    shared hash_table_t *result;
    int64_t n_buckets = nEntries * LOAD_FACTOR;
 
-   result = (shared hash_table_t*) upc_alloc( sizeof(hash_table_t));
+   result = (shared hash_table_t*) upc_alloc( sizeof(shared hash_table_t));
    result->size = n_buckets;
-   result->table = (shared bucket_t*) upc_all_alloc(n_buckets, sizeof(bucket_t));
+   result->table = (shared bucket_t*) upc_all_alloc(n_buckets, sizeof(shared bucket_t));
    //TODO make everything in table zero
 
    if (result->table == NULL) {
@@ -24,7 +24,7 @@ shared hash_table_t* create_hash_table(int64_t nEntries, shared memory_heap_t * 
       exit(1);
    }
    
-   memory_heap->heap = (shared kmer_t *) upc_all_alloc(nEntries, sizeof(kmer_t));
+   memory_heap->heap = (shared kmer_t *) upc_all_alloc(nEntries, sizeof(shared kmer_t));
    if (memory_heap->heap == NULL) {
       fprintf(stderr, "ERROR: Could not allocate memory for the heap!\n");
       exit(1);
@@ -85,21 +85,32 @@ int add_kmer(shared hash_table_t *hashtable, shared memory_heap_t *memory_heap, 
 
    printf("yolo 1 %d %d\n", MYTHREAD, hashval);
    /* Add the contents to the appropriate kmer struct in the heap */
-   shared kmer_t* temp = (memory_heap->heap);
+   shared kmer_t temp ;
+   //temp.kmer = packedKmer;
+   //memcpy(temp.kmer, packedKmer, KMER_PACKED_LENGTH*sizeof(unsigned char));
+   upc_memput(temp.kmer, packedKmer, KMER_PACKED_LENGTH*sizeof(unsigned char));
+   temp.l_ext = left_ext;
+   temp.r_ext = right_ext;
+   printf("yolo 1.25 THREAD %d  %d\n", MYTHREAD,hashval);
+   temp.next = hashtable->table[hashval].head;
+
    printf("yolo 1.5 THREAD %d %d %d\n", MYTHREAD, pos, temp);
-   upc_memput(&((memory_heap->heap[6]).kmer), &pos, 1);
-   //upc_memput(&((memory_heap->heap)[pos]).kmer, packedKmer, KMER_PACKED_LENGTH * sizeof(unsigned char));
+   // upc_memput(&((memory_heap->heap[6])), &pos, 1);
+   memcpy(&(memory_heap->heap)[pos]),&temp, sizeof(shared kmer_t*));
+   //memory_heap->heap[pos] = temp;
+   //upc_memput(&((memory_heap->heap)[pos]), &temp, KMER_PACKED_LENGTH * sizeof(unsigned char));
    printf("yolo 1.75 %d\n", MYTHREAD);
    printf("yolo 2 %d --- %c\n", MYTHREAD, KMER_PACKED_LENGTH, memory_heap->heap[pos].kmer[0]);
-   temp[pos].l_ext = left_ext;
-   temp[pos].r_ext = right_ext;
+   // temp[pos].l_ext = left_ext;
+   // temp[pos].r_ext = right_ext;
    // printf("yolo 2.5\n");
    /* Fix the next pointer to point to the appropriate kmer struct */
-   shared bucket_t* shit = hashtable->table;
-   upc_memcpy((temp[pos].next), (shit[hashval].head), sizeof(shared kmer_t*));
+   // shared bucket_t* shit = hashtable->table;
+   // upc_memcpy((temp[pos].next), (shit[hashval].head), sizeof(shared kmer_t*));
    // printf("yolo 2.75\n");
    /* Fix the head pointer of the appropriate bucket to point to the current kmer */
-   upc_memcpy(shit[hashval].head, &(temp[pos]), sizeof(shared kmer_t*));
+   // upc_memcpy(hashtable->table[hashval].head, &(temp[pos]), sizeof(shared kmer_t*));
+   hashtable->table[hashval].head = &(memory_heap->heap[pos]);
       /* Increase the heap pointer */
    memory_heap->posInHeap++;
    upc_unlock(l);
