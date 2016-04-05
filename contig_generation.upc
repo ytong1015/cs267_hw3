@@ -24,6 +24,10 @@
 #define LINE_SIZE (KMER_LENGTH+4)
 #endif
 
+#ifndef DUMMY
+#define DUMMY -999999
+#endif
+
 static double gettime(void) {
     struct timeval tv;
     if (gettimeofday(&tv, NULL)) {

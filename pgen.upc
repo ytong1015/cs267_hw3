@@ -30,15 +30,13 @@ int main(int argc, char *argv[]){
 	init_LookupTable();
 	nKmers = getNumKmersInUFX(input_UFX_name);
 
-	upc_lock_t *l;
-	l = upc_all_lock_alloc(); 
-
 	/** Read input **/
 	upc_barrier;
 	inputTime -= gettime();
 	///////////////////////////////////////////
 	// Your code for input file reading here //
 	int64_t kmers_per_proc = (nKmers+THREADS-1)/THREADS;
+	int64_t tablesize = nKmers*LOAD_FACTOR;
 	int64_t mykmers = kmers_per_proc;
 	printf(" nkmers = %d mykmers = %d\n", nKmers, mykmers);
 	if (THREADS - 1 == MYTHREAD) mykmers = nKmers - (THREADS-1)*kmers_per_proc;
@@ -59,27 +57,24 @@ int main(int argc, char *argv[]){
 	///////////////////////////////////////////
 	// Your code for graph construction here //
 
-	shared int64_t* next_index = (shared int64_t*)upc_all_alloc(nKmers, sizeof(int64_t));
-	shared kmer_t* memory_heap = (shared kmer_t*)upc_all_alloc(nKmers, sizeof(kmer_t));
+	shared int64_t *next_index, *hash_table;
+	shared kmer_t *memory_heap;
+	create_hash_table(nKmers, &memory_heap, &next_index, &hash_table); 
 
-	int64_t tablesize = nKmers*LOAD_FACTOR;
-	shared int64_t* hash_table = (shared int64_t*)upc_all_alloc(tablesize, sizeof(int64_t));
-	int64_t i;
-	upc_forall(i=0; i<tablesize; i++ ; &hash_table[i])
-	// {
-		hash_table[i] = -1;
-	// }
-
-	upc_forall(i=0; i < nKmers; i++; &next_index[i])
-	// {
-		next_index[i] = -1;
-	// }
 
 	upc_barrier;
 
 	int64_t k = MYTHREAD*kmers_per_proc;
 	ptr = 0;
 
+	printf("The next print statement won't print..... ");
+	upc_lock_t *l = ( upc_lock_t*) upc_all_alloc(tablesize, sizeof(upc_lock_t*));
+	upc_barrier;
+	upc_lock_t ** lock_array = &l + MYTHREAD;
+	for (int64_t i = MYTHREAD; i < tablesize; i+=THREADS) {
+		lock_array[i] = upc_global_lock_alloc();
+	}
+	upc_barrier;
 	while(ptr < cur_chars_read)
 	{
 
@@ -91,12 +86,13 @@ int main(int argc, char *argv[]){
 		// add kmer
 
 		// upc_lock(l);
-		add_kmer(next_index, k, hash_table, tablesize, memory_heap, &working_buffer[ptr],left_ext, right_ext);
+		add_kmer(hash_table, memory_heap, &working_buffer[ptr],left_ext, right_ext, next_index, k, tablesize);//, lock_array);
 		// upc_unlock(l);
 		ptr += LINE_SIZE;
 		k++;
 
 	}
+	printf("see i told you it got stuck\n");
 	///////////////////////////////////////////
 	upc_barrier;
 	constrTime += gettime();
@@ -112,7 +108,7 @@ int main(int argc, char *argv[]){
 	sprintf(output_file_name, "pgen%d.out",MYTHREAD);
 	FILE *out_file = fopen(output_file_name, "w");
 
-	i = 0;
+	int64_t i = 0;
 	ptr = 0;
 	for (; i<nKmers; i++, ptr += LINE_SIZE)
 	{
@@ -129,7 +125,7 @@ int main(int argc, char *argv[]){
 			cur_contig[posInContig] = right_ext;
 			posInContig += 1;
 
-			right_ext = lookup_kmer(memory_heap, next_index, hash_table, tablesize,&cur_contig[posInContig-KMER_LENGTH]);
+			right_ext = lookup_kmer(memory_heap, hash_table, tablesize,&cur_contig[posInContig-KMER_LENGTH], next_index);
 
 		}
 		cur_contig[posInContig] = '\0';
