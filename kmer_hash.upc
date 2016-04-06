@@ -81,7 +81,7 @@ int lookup_kmer(shared kmer_t* memory_heap, shared int64_t* hash_table, int64_t 
 }
 
 /* Adds a kmer and its extensions in the hash tablknows e (note that a memory heap should be preallocated. ) */
-int add_kmer( shared int64_t* hash_table, shared kmer_t* memory_heap, const unsigned char *kmer, char left_ext, char right_ext, shared int64_t* next_index, int64_t k, int tablesize)//, upc_lock_t ** lock_array)
+int add_kmer( shared int64_t* hash_table, shared kmer_t* memory_heap, const unsigned char *kmer, char left_ext, char right_ext, shared int64_t* next_index, int64_t k, int tablesize, upc_lock_t ** lock_array, upc_lock_t ** lock_next_index)
 {
    /* Pack a k-mer sequence appropriately */
    char packedKmer[KMER_PACKED_LENGTH];
@@ -98,31 +98,30 @@ int add_kmer( shared int64_t* hash_table, shared kmer_t* memory_heap, const unsi
 
    upc_memput(&memory_heap[k], &temp, sizeof(kmer_t));
 
-   int64_t ptr;
-   ptr = bupc_atomicI64_cswap_strict(&hash_table[hashval], DUMMY, k);
-   // upc_lock(lock_array[hashval]);
-   // ptr = hash_table[hashval];
-   // if (ptr == DUMMY)
-   // {
-   //    hash_table[hashval] = k;
+   int64_t ptr, ptr2;
+    upc_lock(lock_array[hashval]);
+    ptr = hash_table[hashval];
+    if (ptr == DUMMY)
+    {
+       hash_table[hashval] = k;
    // //    upc_unlock(lock_array[hashval]);
-   //    return 0;
-   // }
-   // upc_unlock(lock_array[hashval]);
+    //   return 0;
+    }
+    upc_unlock(lock_array[hashval]);
    while (ptr!=DUMMY)
    {
-      ptr = bupc_atomicI64_cswap_strict(&next_index[ptr], DUMMY, k);
-      // ptr = next_index[ptr];
-      // // upc_lock(lock_array[ptr]);
-      // if (ptr == DUMMY)
-      // {
-      //    next_index[ptr] = k;
+      upc_lock(lock_next_index[ptr]);
+      ptr2 = next_index[ptr];
+      if (ptr2 == DUMMY)
+      {
+         next_index[ptr] = k;
       // //    upc_unlock(lock_array[ptr]);
       //    break;
-      // }
-      // // upc_unlock(lock_array[ptr]);
+      }
+      upc_unlock(lock_next_index[ptr]);
+      ptr = ptr2;
    }
-
+   //upc_unlock(lock_next_index[ptr]);
    return 0;
 }
 
