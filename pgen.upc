@@ -106,8 +106,7 @@ int main(int argc, char *argv[]){
 
 	upc_barrier;
 
-	int64_t k = MYTHREAD*kmers_per_proc;
-	ptr = 0;
+	int64_t posInHeap = MYTHREAD*kmers_per_proc;
 
 //	printf("The next print statement won't print..... ");
 //	upc_lock_t *l = ( upc_lock_t*) upc_all_alloc(tablesize, sizeof(upc_lock_t*));
@@ -130,10 +129,14 @@ int main(int argc, char *argv[]){
 		// add kmer
 
 		// upc_lock(l);
-		add_kmer(hash_table, memory_heap, &working_buffer[ptr],left_ext, right_ext, next_index, k, tablesize, lock_array, lock_next_index);
+		add_kmer(hash_table, memory_heap, &working_buffer[ptr],left_ext, right_ext, next_index, posInHeap, tablesize, lock_array, lock_next_index);
 		// upc_unlock(l);
+      		/* Create also a list with the "start" kmers: nodes with F as left (backward) extension */
+      		if (left_ext == 'F') {
+         		addKmerToStartList(memory_heap, &startKmersList, posInHeap);
+      		}
 		ptr += LINE_SIZE;
-		k++;
+		posInHeap++;
 
 	}
 
@@ -148,37 +151,43 @@ int main(int argc, char *argv[]){
 	// Your code for graph traversal and output printing here //
 	// Save your output to "pgen.out"                         //
 	////////////////////////////////////////////////////////////
-	char output_file_name[50];
-	sprintf(output_file_name, "pgen%d.out",MYTHREAD);
-	FILE *out_file = fopen(output_file_name, "w");
+	char outfile[100];
+	sprintf(outfile, "pgen%d.out",MYTHREAD);
+	FILE *out_file_name = fopen(outfile, "w");
 	int64_t i = 0;
 	ptr = 0;
-
-	for (; i<mykmers; i++, ptr += LINE_SIZE)
+	curStartNode = startKmersList;
+	while(curStartNode != NULL)
+//	for (; i<mykmers; i++, ptr += LINE_SIZE)
 	{
-		unsigned char left_ext = working_buffer[ptr+KMER_LENGTH+1];
-		if (left_ext != 'F') continue;
+	 	cur_kmer_ptr = curStartNode->kmerPtr;
+		unpackSequence((unsigned char*) cur_kmer_ptr->kmer,  (unsigned char*) unpackedKmer, KMER_LENGTH);	
+//		unsigned char left_ext = working_buffer[ptr+KMER_LENGTH+1];
+//		if (left_ext != 'F') continue;
 
 		memcpy(cur_contig, &working_buffer[ptr], KMER_LENGTH*sizeof(unsigned char)) ;
 		posInContig = KMER_LENGTH;
 		right_ext = working_buffer[ptr+KMER_LENGTH+2];
 
-		while (right_ext != 'F' && right_ext != 0)
+		while (right_ext != 'F')
 		{
 
 			cur_contig[posInContig] = right_ext;
-			posInContig += 1;
+			posInContig ++;
 
-			right_ext = lookup_kmer(memory_heap, hash_table, tablesize,&cur_contig[posInContig-KMER_LENGTH], next_index);
+			*cur_kmer_ptr = lookup_kmer(memory_heap, hash_table, tablesize,&cur_contig[posInContig-KMER_LENGTH], next_index);
+			right_ext = cur_kmer_ptr->r_ext;
 
 		}
 		cur_contig[posInContig] = '\0';
-		fprintf(out_file, "%s\n", cur_contig);
-
+		fprintf(out_file_name, "%s\n", cur_contig);
+		contigID++;
+		totBases += strlen(cur_contig);
+		curStartNode = curStartNode->next;
 
 	}
 
-	fclose(out_file);
+	fclose(out_file_name);
 
 	if (MYTHREAD == 0)
 	{
