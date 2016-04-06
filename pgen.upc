@@ -56,25 +56,25 @@ int main(int argc, char *argv[]){
 	constrTime -= gettime();
 	///////////////////////////////////////////
 	// Your code for graph construction here //
-
+	printf("The next print statement won't print..... ");
 	shared int64_t *next_index, *hash_table;
 	shared kmer_t *memory_heap;
 	create_hash_table(nKmers, &memory_heap, &next_index, &hash_table); 
-
 
 	upc_barrier;
 
 	int64_t k = MYTHREAD*kmers_per_proc;
 	ptr = 0;
 
-	printf("The next print statement won't print..... ");
-	upc_lock_t *l = ( upc_lock_t*) upc_all_alloc(tablesize, sizeof(upc_lock_t*));
-	upc_barrier;
-	upc_lock_t ** lock_array = &l + MYTHREAD;
-	for (int64_t i = MYTHREAD; i < tablesize; i+=THREADS) {
-		lock_array[i] = upc_global_lock_alloc();
-	}
-	upc_barrier;
+//	printf("The next print statement won't print..... ");
+//	upc_lock_t *l = ( upc_lock_t*) upc_all_alloc(tablesize, sizeof(upc_lock_t*));
+//	upc_barrier;
+//	upc_lock_t ** lock_array = &l + MYTHREAD;
+//	for (int64_t i = MYTHREAD; i < tablesize; i+=THREADS) {
+//		lock_array[i] = upc_global_lock_alloc();
+//	}
+//	upc_barrier;
+
 	while(ptr < cur_chars_read)
 	{
 
@@ -92,25 +92,25 @@ int main(int argc, char *argv[]){
 		k++;
 
 	}
+
 	printf("see i told you it got stuck\n");
 	///////////////////////////////////////////
 	upc_barrier;
 	constrTime += gettime();
 
-	/** Graph traversal **/
+	// Graph traversal //
 	traversalTime -= gettime();
 	////////////////////////////////////////////////////////////
 	// Your code for graph traversal and output printing here //
 	// Save your output to "pgen.out"                         //
 	////////////////////////////////////////////////////////////
-
 	char output_file_name[50];
 	sprintf(output_file_name, "pgen%d.out",MYTHREAD);
 	FILE *out_file = fopen(output_file_name, "w");
-
 	int64_t i = 0;
 	ptr = 0;
-	for (; i<nKmers; i++, ptr += LINE_SIZE)
+
+	for (; i<mykmers; i++, ptr += LINE_SIZE)
 	{
 		unsigned char left_ext = working_buffer[ptr+KMER_LENGTH+1];
 		if (left_ext != 'F') continue;
